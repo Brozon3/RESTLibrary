@@ -7,16 +7,20 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 public class Author {
-    public final int authorID;
-    public final String firstName;
-    public final String lastName;
-    public final ArrayList<Book> bookList;
+    public int authorID;
+    public String firstName;
+    public String lastName;
+    public ArrayList<Book> bookList = new ArrayList<>();
 
     public Author(int authorID, String firstName, String lastName) {
         this.authorID = authorID;
         this.firstName = firstName;
         this.lastName = lastName;
         this.bookList = new ArrayList<>();
+    }
+
+    public Author(){
+
     }
 
     public int getAuthorID() {
@@ -27,10 +31,9 @@ public class Author {
 
     public String getLastName() { return lastName; }
 
-
     public String getBookList(){
 
-        try (Connection conn = DatabaseConnection.getDatabaseConnection();){
+        try (Connection conn = DatabaseConnection.getDatabaseConnection()){
             PreparedStatement authorStatement = conn.prepareStatement(
                     "SELECT * FROM authorisbn " +
                             "INNER JOIN titles ON authorisbn.isbn = titles.isbn " +
