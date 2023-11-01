@@ -1,5 +1,9 @@
 package com.example.restlibrary;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 public class Book {
@@ -17,14 +21,6 @@ public class Book {
         this.authorList = new ArrayList<>();
     }
 
-    @Override
-    public String toString() {
-        return "Title: " + title + "\n" +
-                "Edition: " + editionNumber + "\n" +
-                "Copyright: " + copyright + "\n" +
-                "Authors: " + getAuthorList();
-    }
-
     public String getISBN() { return ISBN; }
 
     public String getTitle() { return title; }
@@ -33,17 +29,34 @@ public class Book {
 
     public int getCopyright() { return copyright; }
 
-    public String getAuthorList() {
+    public String getAuthorList(){
+
+        try (Connection conn = DatabaseConnection.getDatabaseConnection();){
+            PreparedStatement authorStatement = conn.prepareStatement(
+                    "SELECT * FROM authorisbn " +
+                            "INNER JOIN authors ON authorisbn.authorID = authors.authorID " +
+                            "WHERE isbn = (?)");
+            authorStatement.setString(1, this.ISBN);
+            ResultSet authors = authorStatement.executeQuery();
+
+            while (authors.next()) {
+                this.addAuthor(new Author(authors.getInt("authorID"), authors.getString("firstName"), authors.getString("lastName")));
+            }
+        } catch (SQLException e) {
+            System.err.format("Error: %s\n%s", e.getCause(), e.getMessage());
+        }
+
         if (this.authorList.isEmpty()){
             return "";
         } else {
             StringBuilder authors = new StringBuilder();
             for (Author a : this.authorList) {
-                authors.append(a.getName()).append(", ");
+                authors.append(a.getFirstName()).append(" ").append(a.getLastName()).append(", ");
             }
             return authors.substring(0, authors.length() - 2);
         }
     }
+
 
     public void addAuthor(Author author){
         boolean found = false;

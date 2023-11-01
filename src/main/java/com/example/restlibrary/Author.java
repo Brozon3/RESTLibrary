@@ -1,4 +1,8 @@
 package com.example.restlibrary;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -19,23 +23,36 @@ public class Author {
         return authorID;
     }
 
-    public String getName() { return firstName + " " + lastName; }
-
     public String getFirstName() { return firstName; }
 
     public String getLastName() { return lastName; }
 
 
-    public String getBookList() {
+    public String getBookList(){
+
+        try (Connection conn = DatabaseConnection.getDatabaseConnection();){
+            PreparedStatement authorStatement = conn.prepareStatement(
+                    "SELECT * FROM authorisbn " +
+                            "INNER JOIN titles ON authorisbn.isbn = titles.isbn " +
+                            "WHERE authorID = (?)");
+            authorStatement.setInt(1, this.authorID);
+            ResultSet books = authorStatement.executeQuery();
+
+            while (books.next()) {
+                this.addBook(new Book(books.getString("titles.isbn"), books.getString("title"), books.getInt("editionNumber"), Integer.parseInt(books.getString("copyright"))));
+            }
+        } catch (SQLException e) {
+            System.err.format("Error: %s\n%s", e.getCause(), e.getMessage());
+        }
 
         if (bookList.isEmpty()){
             return "";
         } else {
             StringBuilder books = new StringBuilder();
             for (Book b : this.bookList) {
-                books.append(b.getTitle()).append(" || ");
+                books.append(b.getTitle()).append(", ");
             }
-            return books.substring(0, books.length() - 4);
+            return books.substring(0, books.length() - 2);
         }
     }
 
