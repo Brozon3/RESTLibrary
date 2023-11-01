@@ -3,6 +3,7 @@ package com.example.restlibrary;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.GenericEntity;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Request;
 import jakarta.ws.rs.core.Response;
 
 import java.sql.*;
@@ -253,6 +254,13 @@ public class LibraryController {
         }
 
         return Response.ok("The author with an ID of " + id + " was successfully deleted.").build();
+    }
+
+    @POST
+    @Path("/associateAuthor")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response associateAuthor(){
+        return Response.ok("").build();
     }
 
 }
