@@ -3,7 +3,6 @@ package com.example.restlibrary;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.GenericEntity;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Request;
 import jakarta.ws.rs.core.Response;
 
 import java.sql.*;
@@ -15,11 +14,18 @@ public class LibraryController {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response welcomeMessage(){
-        String welcomeMessage = "Welcome to my Library API. To see a list of books or authors already in the library, " +
-                "you can use a GET method on /books or /authors. To add a book or an author to the library you can use " +
-                "the same routes but use a POST method instead. To delete a book or an author, use a DELETE method and " +
-                "/books/isbn or /authors/id. You can use the same routes as the DELETE method with a GET request to see" +
-                "a specific book or author";
+        String welcomeMessage = "Welcome to my Library API. You can use the following commands to access the library." +
+                "\n @GET on '/books' to see all of the books" +
+                "\n @GET on '/authors' to see all of the authors" +
+                "\n @GET on '/book/isbn to see a specific book" +
+                "\n @GET on '/author/id' to see a specific author" +
+                "\n @POST on '/addbook' to add a book" +
+                "\n @POST on '/addauthor' to add an author" +
+                "\n @POST on '/addassocation' to add an association between a book and an author" +
+                "\n @PUT on '/modbook' to modify an existing book" +
+                "\n @PUT on '/modauthor' to modify an existing author" +
+                "\n @DELETE on '/delbook/isbn' to delete an existing book " +
+                "\n @DELETE on '/delauthor/id' to delete an existing author";
         return Response.ok(welcomeMessage).build();
     }
 
@@ -243,6 +249,7 @@ public class LibraryController {
     @Path("/delauthor/{id}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delAuthor(@PathParam("id") int id){
+
         try (Connection conn = DatabaseConnection.getDatabaseConnection()){
             PreparedStatement pstmt = conn.prepareStatement("DELETE FROM authors WHERE authorID = (?)");
             pstmt.setInt(1, id);
@@ -257,10 +264,69 @@ public class LibraryController {
     }
 
     @POST
-    @Path("/associateAuthor")
+    @Path("/associateauthor")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response associateAuthor(){
-        return Response.ok("").build();
+    public Response associateAuthor(Keys ids){
+
+        boolean bookFound = false;
+        boolean authorFound = false;
+        boolean alreadyAssociated = false;
+
+        try (Connection conn = DatabaseConnection.getDatabaseConnection()){
+
+            PreparedStatement bookSearch = conn.prepareStatement("SELECT * FROM titles WHERE isbn = (?)");
+            bookSearch.setString(1, ids.ISBN);
+            ResultSet bookResults = bookSearch.executeQuery();
+
+            while (bookResults.next()) {
+                bookFound = true;
+            }
+
+            if (!bookFound) {
+                return Response.status(400, "Could not find a book with that ISBN in the database.")
+                        .build();
+            }
+
+            PreparedStatement authorSearch = conn.prepareStatement("SELECT * FROM authors WHERE authorID = (?)");
+            authorSearch.setInt(1, ids.authorID);
+            ResultSet authorResults = bookSearch.executeQuery();
+
+            while (authorResults.next()) {
+                authorFound = true;
+            }
+
+            if (!authorFound) {
+                return Response.status(400, "Could not find an author with that ID in the database.")
+                        .build();
+            }
+
+            PreparedStatement associationSearch = conn.prepareStatement("SELECT * FROM authorisbn " +
+                    "WHERE isbn = (?) AND authorID = (?)");
+            associationSearch.setString(1, ids.ISBN);
+            associationSearch.setInt(2, ids.authorID);
+            ResultSet associationResults = associationSearch.executeQuery();
+
+            while (associationResults.next()){
+                alreadyAssociated = true;
+            }
+
+            if (alreadyAssociated){
+                return Response.status(400, "That author is already associated with that book.")
+                        .build();
+            } else {
+                PreparedStatement addAssociation = conn.prepareStatement("INSERT INTO authorisbn VALUES (?, ?)");
+                addAssociation.setInt(1, ids.authorID);
+                addAssociation.setString(2, ids.ISBN);
+                addAssociation.executeQuery();
+            }
+
+        } catch (SQLException e) {
+            System.err.format("Error: %s\n%s", e.getCause(), e.getMessage());
+            return Response.status(400, "Unable to add an association between that author and that " +
+                    "book." + e.getMessage()).build();
+        }
+
+        return Response.ok(ids).build();
     }
 
 }
